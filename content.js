@@ -125,6 +125,77 @@ function extractNewsArticlesFromKalerkantho() {
     return allArticles;
 }
 
+async function getHeadOfPage(url) {
+    try {
+        // Fetch the HTML content of the page
+        const response = await fetch(url);
+        const headHTML = await response.text();
+
+        // // Use DOMParser to parse the HTML
+        // const parser = new DOMParser();
+        // const doc = parser.parseFromString(htmlText, "text/html");
+        // // Extract the <head> section
+        // const head = doc.head;
+        // // Return the inner HTML of the <head> section
+        // return head.innerHTML;
+
+        // Parse the head HTML into a DOM object
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(headHTML, "text/html");
+
+        // Extract the title (prefer og:title, fallback to <title>)
+        const title = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.textContent || '';
+
+        // Extract the description (prefer og:description, fallback to description)
+        const description = doc.querySelector('meta[property="og:description"]')?.content || doc.querySelector('meta[name="description"]')?.content || '';
+
+        // Extract the image (og:image)
+        const image = doc.querySelector('meta[property="og:image"]')?.content || '';
+
+        // Extract the URL (og:url)
+        const url = doc.querySelector('meta[property="og:url"]')?.content || url;
+
+        // Extract the author
+        const author = doc.querySelector('meta[name="author"]')?.content || '';
+
+        // Return the extracted information
+        return {
+            title,
+            description,
+            image,
+            url,
+            author
+        };
+    } catch (error) {
+        console.error("Error fetching the page:", error);
+        return null;
+    }
+}
+
+// Example usage
+// getHeadOfPage("https://example.com").then(headContent => {
+//     console.log(headContent);
+// });
+
+function findAllLinks() {
+    // Define the pattern to match (current page's pathname)
+    const pattern = location.pathname; // e.g., "/online/world/2025/03/08/1489868"
+    // Select all anchor elements with an href attribute, excluding those in <nav> and <footer>
+    const anchors = document.querySelectorAll('a[href]:not(nav a):not(footer a)');
+
+    // Filter anchors whose href matches the pattern
+    const matchingAnchors = Array.from(anchors).filter(anchor => {
+        // Get the href value of the anchor (absolute or relative)
+        const anchorHref = anchor.href;
+        // Check if the href includes the pattern
+        return anchorHref != location.href && anchorHref.includes(pattern);
+    });
+
+    // Log the matching anchors
+    console.log(matchingAnchors);
+    return matchingAnchors;
+}
+
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "highlightContainers") {
@@ -137,7 +208,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Call the function and log the results
         const newsArticles = extractNewsArticlesFromKalerkantho();
         console.log("Extracted articles:", newsArticles);
-        sendResponse({ articles: newsArticles });
+        sendResponse({ articles: newsArticles, host: location.host });
+    } else {
+
+        let allArticles = [];
+        let links = findAllLinks();
+
+        new Promise(async (res, rej) => {
+            for (let index = 0; index < links.length; index++) {
+                const link = links[index];
+
+                let head = await getHeadOfPage(link);
+                allArticles.push(head);
+            }
+            res();
+        }).then((r) => {
+            console.log("Extracted articles:", allArticles);
+            sendResponse({ articles: allArticles, host: location.host });
+        });
+
     }
     return true; // Required for async response
 });
