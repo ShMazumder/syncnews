@@ -1,0 +1,17 @@
+{
+    "manifest_version": 3,
+    "name": "News Extractor",
+    "version": "1.3",
+    "description": "Extract news articles from websites and download as TSV.",
+    "permissions": ["storage", "downloads", "clipboardWrite", "activeTab"],
+    "host_permissions": ["*://*/*"],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "content_scripts": [
+      {
+        "matches": ["*://*/*"],
+        "js": ["content.js"]
+      }
+    ]
+  }
