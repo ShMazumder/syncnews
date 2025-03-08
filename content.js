@@ -156,7 +156,7 @@ async function getHeadOfPage(link) {
         const url = doc.querySelector('meta[property="og:url"]')?.content || link;
 
         // Extract the author
-        const author = doc.querySelector('meta[name="author"]')?.content || '';
+        const author = doc.querySelector('meta[name="author"]')?.content || doc.querySelector('meta[name="Author"]')?.content || '';
 
         // Return the extracted information
         return {
