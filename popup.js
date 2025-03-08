@@ -53,7 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     let time = Date.now();
                     downloadAsTSV(response.articles, `${host}_${time}.tsv`);
                     outputDiv.innerHTML = `<pre>${JSON.stringify(response.articles, null, 2)}</pre>`;
-                } else {
+                } else if (response?.update){
+                    outputDiv.innerHTML = `${update}`;
+                }else {
                     outputDiv.textContent = "No articles found in the selected container.";
                 }
             });

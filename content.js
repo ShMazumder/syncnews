@@ -188,9 +188,10 @@ function findAllLinks() {
         // Get the href value of the anchor (absolute or relative)
         const anchorHref = anchor.href;
         // Check if the href includes the pattern
-        console.log(anchorHref, location.href, anchorHref != location.href);
-        
-        return anchorHref != location.href && anchorHref.includes(pattern);
+        console.log(anchorHref, location.href, anchorHref != location.href, Math.abs(anchorHref.length - location.href.length) > 1);
+
+        return anchorHref != location.href && Math.abs(anchorHref.length - location.href.length) > 1
+            && anchorHref.includes(pattern);
     });
 
     // Log the matching anchors
@@ -215,10 +216,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         let allArticles = [];
         let links = findAllLinks();
+        console.log(`Found ${links.length} news.`);
+        // sendResponse({ update: `Found ${links.length} news.` });
 
         new Promise(async (res, rej) => {
             for (let index = 0; index < links.length; index++) {
                 const link = links[index];
+                // sendResponse({ update: `Loading: ${index + 1}/${links.length}.` });
+                console.log(`Loading: ${index + 1}/${links.length}.`);
 
                 let head = await getHeadOfPage(link);
                 allArticles.push(head);
