@@ -125,10 +125,10 @@ function extractNewsArticlesFromKalerkantho() {
     return allArticles;
 }
 
-async function getHeadOfPage(url) {
+async function getHeadOfPage(link) {
     try {
         // Fetch the HTML content of the page
-        const response = await fetch(url);
+        const response = await fetch(link);
         const headHTML = await response.text();
 
         // // Use DOMParser to parse the HTML
@@ -153,7 +153,7 @@ async function getHeadOfPage(url) {
         const image = doc.querySelector('meta[property="og:image"]')?.content || '';
 
         // Extract the URL (og:url)
-        const url = doc.querySelector('meta[property="og:url"]')?.content || url;
+        const url = doc.querySelector('meta[property="og:url"]')?.content || link;
 
         // Extract the author
         const author = doc.querySelector('meta[name="author"]')?.content || '';
@@ -188,6 +188,8 @@ function findAllLinks() {
         // Get the href value of the anchor (absolute or relative)
         const anchorHref = anchor.href;
         // Check if the href includes the pattern
+        console.log(anchorHref, location.href, anchorHref != location.href);
+        
         return anchorHref != location.href && anchorHref.includes(pattern);
     });
 
