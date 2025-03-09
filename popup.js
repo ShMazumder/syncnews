@@ -53,7 +53,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     let host = response.host || location.hostname;
                     let time = Date.now();
                     downloadAsTSV(response.articles, `${host}_${time}.tsv`);
-                    outputDiv.innerHTML = `<pre>${JSON.stringify(response.articles, null, 2)}</pre>`;
+                    // outputDiv.innerHTML = `<pre>${JSON.stringify(response.articles, null, 2)}</pre>`;
+                    outputDiv.innerHTML = `<pre>${response.articles.length} articles extracted</pre>`;
                     // window.articles = [...(window.articles || []), ...response.articles]
                 } else if (response?.update) {
                     outputDiv.innerHTML = `${update}`;
