@@ -206,7 +206,7 @@ async function getHeadOfPage(link) {
         };
     } catch (error) {
         console.log("Error fetching the page:", error);
-        return false;
+        return null;
     }
 }
 
