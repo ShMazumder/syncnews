@@ -125,6 +125,35 @@ function extractNewsArticlesFromKalerkantho() {
     return allArticles;
 }
 
+// function cleanText(text) {
+//     // Remove script tags and their content
+//     text = text.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '');
+
+//     // Remove double new lines and replace with a single new line
+//     text = text.replace(/\n\s*\n/g, '\n');
+
+//     // Trim extra spaces and new lines from the start and end
+//     text = text.trim();
+
+//     return text;
+//   }
+
+function cleanText(text) {
+    text = text.replace(/<(script|style)\b[^>]*>([\s\S]*?)<\/\1>/gi, '');
+    text = text.replace(/\s(on\w+)=["'][^"']*["']/gi, '');
+
+    // Remove all other HTML tags
+    text = text.replace(/<[^>]+>/g, '');
+
+    // Remove double new lines and replace with a single new line
+    text = text.replace(/\n\s*\n/g, '\n');
+
+    // Trim extra spaces and new lines from the start and end
+    text = text.trim();
+
+    return text;
+}
+
 async function getHeadOfPage(link) {
     try {
         // Fetch the HTML content of the page
@@ -143,32 +172,41 @@ async function getHeadOfPage(link) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(headHTML, "text/html");
 
+        const head = doc.head;
+        const body = doc.body;
+
         // Extract the title (prefer og:title, fallback to <title>)
-        const title = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.textContent || '';
+        const title = head.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.textContent || '';
 
         // Extract the description (prefer og:description, fallback to description)
-        const description = doc.querySelector('meta[property="og:description"]')?.content || doc.querySelector('meta[name="description"]')?.content || '';
+        const description = head.querySelector('meta[property="og:description"]')?.content || doc.querySelector('meta[name="description"]')?.content || '';
 
         // Extract the image (og:image)
-        const image = doc.querySelector('meta[property="og:image"]')?.content || '';
+        const image = head.querySelector('meta[property="og:image"]')?.content || '';
 
         // Extract the URL (og:url)
-        const url = doc.querySelector('meta[property="og:url"]')?.content || link;
+        const url = head.querySelector('meta[property="og:url"]')?.content || link;
 
         // Extract the author
-        const author = doc.querySelector('meta[name="author"]')?.content || doc.querySelector('meta[name="Author"]')?.content || '';
+        const author = head.querySelector('meta[name="author"]')?.content || doc.querySelector('meta[name="Author"]')?.content || '';
+
+        //
+        const full_description = cleanText(body.outerHTML || body.innerText || body.textContent || '');
 
         // Return the extracted information
         return {
             title,
             description,
+            full_description,
             image,
             url,
-            author
+            author,
+            // head,
+            // body
         };
     } catch (error) {
-        console.error("Error fetching the page:", error);
-        return null;
+        console.log("Error fetching the page:", error);
+        return false;
     }
 }
 
@@ -216,17 +254,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         let allArticles = [];
         let links = findAllLinks();
-        console.log(`Found ${links.length} news.`);
+        console.log(`Found ${links.length} news.`, links);
+        // Extract href attributes and filter out empty or invalid links
+
+        // Use a Set to remove duplicates
+        links = [...new Set(links)];
+
         // sendResponse({ update: `Found ${links.length} news.` });
+
+        // Promise.all(links.map((link, index)=>{
+        //     // sendResponse({ update: `Loading: ${index + 1}/${links.length}.` });
+        //     console.log(`Loading: ${index + 1}/${links.length}.`);
+        //     return getHeadOfPage(link);
+        // })).then((allArticles) => {
+        //     console.log("Extracted articles:", allArticles);
+        //     sendResponse({ articles: allArticles, host: location.host });
+        // });
 
         new Promise(async (res, rej) => {
             for (let index = 0; index < links.length; index++) {
                 const link = links[index];
                 // sendResponse({ update: `Loading: ${index + 1}/${links.length}.` });
-                console.log(`Loading: ${index + 1}/${links.length}.`);
+                // console.log(`Loading: ${index + 1}/${links.length}.`);
 
                 let head = await getHeadOfPage(link);
-                allArticles.push(head);
+                if (head) {
+                    allArticles.push(head);
+                }
+
+                // // Ensure toastr is loaded
+                // if (typeof toastr !== 'undefined') {
+                //     // Configure toastr options
+                //     toastr.options = {
+                //         closeButton: true,
+                //         progressBar: true,
+                //         positionClass: 'toast-top-right',
+                //         timeOut: 3000,
+                //         extendedTimeOut: 1000
+                //     };
+
+                //     // Show a toast notification
+                //     toastr.success(`Loading: ${index + 1}/${links.length}.`);
+                // } else {
+                //     console.error('Toastr is not found.'+`Loading: ${index + 1}/${links.length}.`);
+                // }
             }
             res();
         }).then((r) => {
