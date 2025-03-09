@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // const extractBtn = document.getElementById("extract-btn");
     // const extractWebpageBtn = document.getElementById("extract-webpage-btn");
     const extractAllBtn = document.getElementById("extract-all-btn");
+    const downloadAllBtn = document.getElementById("download-all-btn");
     const outputDiv = document.getElementById("output");
 
     // // Highlight containers when the button is clicked
@@ -53,39 +54,59 @@ document.addEventListener("DOMContentLoaded", () => {
                     let time = Date.now();
                     downloadAsTSV(response.articles, `${host}_${time}.tsv`);
                     outputDiv.innerHTML = `<pre>${JSON.stringify(response.articles, null, 2)}</pre>`;
-                } else if (response?.update){
+                    // window.articles = [...(window.articles || []), ...response.articles]
+                } else if (response?.update) {
                     outputDiv.innerHTML = `${update}`;
-                }else {
+                } else {
                     outputDiv.textContent = "No articles found in the selected container.";
                 }
             });
         });
     });
 
+    downloadAllBtn.addEventListener('click', () => {
+        let host = location.hostname;
+        let time = Date.now();
+        downloadAsTSV((window.articles || []), `${host}_${time}.tsv`);
+
+    });
     function downloadAsTSV(data, filename) {
+        if (!data || data.length === 0) {
+            console.error("No data to download.");
+            return;
+        }
+    
+        // Ensure all objects have the same keys
+        const headers = Object.keys(data[0]);
+        if (!headers || headers.length === 0) {
+            console.error("No valid headers found in the data.");
+            return;
+        }
+    
         // Convert array of objects to TSV string
         const tsvString = [
             // Create header row from object keys
-            Object.keys(data[0]).join("\t"),
+            headers.join("\t"),
             // Create rows for each object
             ...data.map(item =>
-                Object.values(item)
-                    .map(value => String(value).replace(/\t/g, " ")) // Replace tabs in values to avoid breaking TSV
-                    .join("\t")
+                headers.map(header => {
+                    const value = item[header];
+                    return String(value).replace(/\t/g, " "); // Replace tabs in values to avoid breaking TSV
+                }).join("\t")
             )
         ].join("\n");
-
+    
         // Create a Blob with the TSV data
         const blob = new Blob([tsvString], { type: "text/tab-separated-values" });
-
+    
         // Create a link element to trigger the download
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = filename || "articles.tsv";
-
+    
         // Trigger the download
         link.click();
-
+    
         // Clean up
         URL.revokeObjectURL(link.href);
     }
