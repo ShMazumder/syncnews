@@ -77,38 +77,53 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
     
-        // Ensure all objects have the same keys
-        const headers = Object.keys(data[0]);
-        if (!headers || headers.length === 0) {
+        // Collect all unique headers in the order they first appear
+        const headers = [];
+        const seenHeaders = new Set();
+        for (const item of data) {
+            for (const key of Object.keys(item)) {
+                if (!seenHeaders.has(key)) {
+                    seenHeaders.add(key);
+                    headers.push(key);
+                }
+            }
+        }
+    
+        if (headers.length === 0) {
             console.error("No valid headers found in the data.");
             return;
         }
     
         // Convert array of objects to TSV string
         const tsvString = [
-            // Create header row from object keys
+            // Header row
             headers.join("\t"),
-            // Create rows for each object
+            // Data rows
             ...data.map(item =>
                 headers.map(header => {
-                    const value = item[header];
-                    return String(value).replace(/\t/g, " "); // Replace tabs in values to avoid breaking TSV
+                    // Handle missing values and special characters
+                    const value = item.hasOwnProperty(header) ? item[header] : '';
+                    return String(value)
+                        .replace(/[\t\n]/g, " ")  // Replace tabs and newlines
+                        .replace(/"/g, '""');     // Escape double quotes
                 }).join("\t")
             )
         ].join("\n");
     
-        // Create a Blob with the TSV data
-        const blob = new Blob([tsvString], { type: "text/tab-separated-values" });
+        // Create Blob with UTF-8 BOM for Excel compatibility
+        const blob = new Blob(["\uFEFF" + tsvString], {
+            type: "text/tab-separated-values; charset=UTF-8"
+        });
     
-        // Create a link element to trigger the download
+        // Create and trigger download link
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = filename || "articles.tsv";
-    
-        // Trigger the download
+        link.download = filename || "data.tsv";
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     
-        // Clean up
+        // Cleanup
         URL.revokeObjectURL(link.href);
     }
 });
